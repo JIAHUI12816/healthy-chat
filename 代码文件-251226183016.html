@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>疾控健康科普智能问答助手</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* 基础重置：强制页面不超出屏幕，禁止整体滚动 */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans SC', '微软雅黑', sans-serif;
+            line-height: 1.6;
+            background-color: #f8f8f8;
+            color: #333;
+            overflow: hidden;
+            font-size: 16px;
+            transition: font-size 0.3s ease;
+        }
+
+        /* 大字版样式：全局放大字体和元素 */
+        body.large-font {
+            font-size: 20px;
+            line-height: 1.8;
+        }
+
+        /* 页面容器：固定100vh，占满整个屏幕 */
+        .container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+
+        /* 头部：固定高度，不压缩，新增大字版按钮容器 */
+        .app-header {
+            background-color: #8B0000;
+            color: #fff;
+            padding: 15px 20px;
+            text-align: center;
+            border-bottom: 5px solid #FF4500;
+            flex-shrink: 0;
+            position: relative;
+        }
+        .app-title {
+            font-size: 1.8em;
+            margin: 0;
+            font-weight: 700;
+        }
+        /* 大字版按钮：显眼、易点击 */
+        .font-toggle-btn {
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            padding: 8px 16px;
+            background-color: #fff;
+            color: #8B0000;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .font-toggle-btn:hover {
+            background-color: #f0f0f0;
+            transform: translateY(-50%) scale(1.05);
+        }
+        body.large-font .font-toggle-btn {
+            padding: 12px 20px;
+            font-size: 1.1em;
+        }
+
+        /* 主内容区：水平flex，占满剩余高度 */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            padding: 15px;
+            gap: 15px;
+            transition: all 0.3s ease;
+        }
+
+        /* 左侧面板（资源+历史）：固定宽度，内部滚动 */
+        .left-panel {
+            width: 300px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+        body.large-font .left-panel {
+            width: 350px;
+            padding: 20px;
+            gap: 25px;
+        }
+        .left-section {
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 15px;
+        }
+        .left-section h2 {
+            color: #8B0000;
+            font-size: 1.2em;
+            margin: 0 0 10px 0;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #eee;
+        }
+        .left-section p {
+            font-size: 1em;
+            color: #555;
+            margin: 0 0 10px 0;
+        }
+        .health-links {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .health-links li {
+            margin-bottom: 8px;
+        }
+        .health-links a {
+            text-decoration: none;
+            color: #333;
+            font-weight: 500;
+            font-size: 1em;
+            transition: color 0.3s;
+        }
+        .health-links a:hover {
+            color: #FF4500;
+        }
+        .daily-health .date-tip {
+            font-size: 1em;
+            color: #666;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+        .daily-health .health-tip {
+            font-size: 1em;
+            line-height: 1.5;
+        }
+        .history-section .history-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .history-list li {
+            padding: 8px 10px;
+            margin-bottom: 5px;
+            background-color: #fdfdfd;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        body.large-font .history-list li {
+            padding: 12px 15px;
+            margin-bottom: 8px;
+        }
+        .history-list li:hover {
+            background-color: #f0f0f0;
+        }
+        .history-list li.empty {
+            color: #999;
+            cursor: default;
+            background-color: #fff;
+            border: none;
+        }
+
+        /* 右侧聊天区：自适应宽度，相对定位 */
+        .right-panel {
+            flex: 1;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        body.large-font .right-panel {
+            padding: 20px;
+        }
+
+        /* 核心：问答区域（聊天显示区）+ 匹配图片的滚动条样式 */
+        .chat-display {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #fdfdfd;
+            border-radius: 4px;
+            /* 缩小聊天区底部预留空间（适配更小的问题框） */
+            margin-bottom: 100px; 
+            scrollbar-width: thin;
+            scrollbar-color: #8B0000 #f1f1f1;
+            transition: all 0.3s ease;
+        }
+        body.large-font .chat-display {
+            padding: 15px;
+            margin-bottom: 130px;
+        }
+        .chat-display::-webkit-scrollbar {
+            width: 8px;
+        }
+        body.large-font .chat-display::-webkit-scrollbar {
+            width: 10px;
+        }
+        .chat-display::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .chat-display::-webkit-scrollbar-thumb {
+            background: #8B0000;
+            border-radius: 4px;
+        }
+        .chat-display::-webkit-scrollbar-thumb:hover {
+            background: #a80000;
+        }
+
+        .welcome-message {
+            color: #666;
+            font-style: italic;
+            text-align: center;
+            padding: 10px;
+            margin-bottom: 15px;
+            font-size: 1em;
+        }
+        .message {
+            padding: 10px 15px;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            max-width: 75%;
+            line-height: 1.5;
+            word-wrap: break-word;
+            font-size: 1em;
+        }
+        body.large-font .message {
+            padding: 15px 20px;
+            margin-bottom: 15px;
+            border-radius: 15px;
+        }
+        .user-message {
+            background-color: #e6f7ff;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+        .ai-message {
+            background-color: #f0f0f0;
+            align-self: flex-start;
+        }
+
+        /* 输入区域：整体下移，调整位置 */
+        .input-area {
+            position: absolute;
+            /* 问题框位置微调，避免太靠下 */
+            bottom: 20px; 
+            left: 15px;
+            right: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            background-color: #fff;
+            padding: 0;
+            border-top: none;
+            transition: all 0.3s ease;
+        }
+        body.large-font .input-area {
+            bottom: 30px;
+            left: 20px;
+            right: 20px;
+            gap: 12px;
+        }
+        /* 知识库状态条：增加顶部间距，避免和回答粘连 */
+        .knowledge-base-status {
+            padding: 8px 15px;
+            border: 1px solid #8B0000;
+            border-radius: 4px;
+            background-color: #8B0000;
+            color: #fff;
+            font-size: 1em;
+            text-align: center;
+            font-weight: 500;
+            margin-top: 12px; /* 核心：增加顶部间距，避免和回答连在一起 */
+        }
+        body.large-font .knowledge-base-status {
+            padding: 12px 20px;
+            font-size: 1.1em;
+            border-radius: 6px;
+            margin-top: 15px; /* 大字版同步增加间距 */
+        }
+        /* 输入框容器：相对定位，用于放置内部的发送按钮 */
+        .input-wrapper {
+            position: relative;
+            width: 100%;
+        }
+        /* 缩小问题框尺寸 */
+        textarea {
+            width: 100%;
+            /* 右侧预留按钮空间缩小 */
+            padding: 8px 80px 8px 12px; 
+            border: 1px solid #000;
+            border-radius: 4px;
+            resize: none;
+            font-size: 1em;
+            /* 最小高度缩小 */
+            min-height: 50px; 
+            max-height: 100px;
+            box-sizing: border-box;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+        body.large-font textarea {
+            padding: 12px 100px 12px 18px;
+            min-height: 70px;
+            max-height: 130px;
+            font-size: 1.1em;
+            border-radius: 6px;
+        }
+        /* 缩小发送按钮尺寸 */
+        .send-button {
+            position: absolute;
+            bottom: 8px; /* 与输入框内边距对齐 */
+            right: 8px;
+            padding: 6px 18px; /* 按钮尺寸缩小 */
+            background-color: #8B0000;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.95em;
+            font-weight: bold;
+            transition: background-color 0.3s, transform 0.2s;
+            z-index: 10;
+        }
+        body.large-font .send-button {
+            padding: 10px 24px;
+            bottom: 12px;
+            right: 12px;
+            font-size: 1.05em;
+            border-radius: 6px;
+        }
+        .send-button:hover {
+            background-color: #a80000;
+            transform: scale(1.05);
+        }
+
+        /* 缩窄底部“北京大学医学部”区域 */
+        .app-footer {
+            background-color: #8B0000;
+            color: #fff;
+            text-align: center;
+            /* 缩小内边距，减少区域高度 */
+            padding: 5px 20px; 
+            font-size: 0.9em; /* 字体略缩小 */
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+        body.large-font .app-footer {
+            padding: 8px 20px;
+            font-size: 1em;
+        }
+
+        /* 响应式适配：小屏自动调整 */
+        @media (max-width: 768px) {
+            .main-content {
+                flex-direction: column;
+                padding: 10px;
+            }
+            .left-panel {
+                width: 100%;
+                max-height: 150px;
+            }
+            body.large-font .left-panel {
+                width: 100%;
+                max-height: 200px;
+            }
+            .right-panel {
+                min-height: 300px;
+            }
+            .chat-display {
+                margin-bottom: 120px;
+            }
+            body.large-font .chat-display {
+                margin-bottom: 160px;
+            }
+            textarea {
+                min-height: 40px;
+                padding-right: 70px;
+            }
+            body.large-font textarea {
+                min-height: 60px;
+                padding-right: 90px;
+            }
+            .send-button {
+                padding: 4px 15px;
+                font-size: 0.9em;
+            }
+            body.large-font .send-button {
+                padding: 8px 20px;
+                font-size: 0.95em;
+            }
+            .font-toggle-btn {
+                position: static;
+                transform: none;
+                margin-top: 10px;
+                width: 100%;
+            }
+        }
+    </style>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部：新增大字版切换按钮 -->
+        <header class="app-header">
+            <h1 class="app-title">疾控健康科普智能问答助手</h1>
+            <button class="font-toggle-btn" id="fontToggleBtn">切换大字版</button>
+        </header>
+
+        <!-- 主内容区：左侧面板 + 右侧聊天区 -->
+        <main class="main-content">
+            <!-- 左侧面板（资源+历史） -->
+            <aside class="left-panel">
+                <div class="left-section">
+                    <h2>健康科普资源</h2>
+                    <p>提供权威健康科普内容，助力了解健康防护知识：</p>
+                    <ul class="health-links">
+                        <li><a href="https://www.chinacdc.cn/jkkp/" target="_blank">中国疾控中心健康科普专栏</a></li>
+                        <li><a href="https://zwfw.nhc.gov.cn/" target="_blank">国家卫健委健康服务平台</a></li>
+                        <li><a href="https://dxy.com/" target="_blank">丁香医生专业健康平台</a></li>
+                        <li><a href="https://h5.baike.qq.com/mobile/home.html?VNK=23e49357" target="_blank">腾讯医典权威健康科普</a></li>
+                        <li><a href="https://www.kepuchina.cn/health" target="_blank">科普中国-健康专区</a></li>
+                    </ul>
+                </div>
+
+                <div class="left-section daily-health">
+                    <h2>每日健康知识</h2>
+                    <div class="date-tip" id="date-display"></div>
+                    <div class="health-tip" id="daily-health-tip"></div>
+                </div>
+
+                <div class="left-section history-section">
+                    <h2>历史记录</h2>
+                    <ul class="history-list" id="history-list">
+                        <li class="empty">暂无历史记录</li>
+                    </ul>
+                </div>
+            </aside>
+
+            <!-- 右侧聊天区（核心：带样式滚动条的问答区域） -->
+            <section class="right-panel">
+                <div class="chat-display" id="chat-display">
+                    <p class="welcome-message">您好！我是疾控健康科普智能问答助手，专注为您解答健康科普相关问题，请问有什么可以帮助您的？</p>
+                </div>
+
+                <!-- 输入区域：新增input-wrapper容器，用于放置内部发送按钮 -->
+                <div class="input-area">
+                    <div class="knowledge-base-status">当前使用：中国疾控中心健康科普知识库</div>
+                    <div class="input-wrapper"> <!-- 新增容器 -->
+                        <textarea id="user-question" placeholder="请输入您的健康科普问题，例如：如何预防流感？" rows="2"></textarea>
+                        <button class="send-button" id="send-button">发送</button> <!-- 嵌入输入框内 -->
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 底部信息：缩窄后的区域 -->
+        <footer class="app-footer">
+            <p>北京大学医学部</p>
+        </footer>
+    </div>
+
+    <script>
+        // API配置（替换为你自己的有效API Key）
+        const apiKey = "fastgpt-cnRUcGD77wFYWri4T3HBxLHdvGuoQPhR4xGc8yhYVpJpx5AOENN3YGPak";
+        const baseUrl = "https://cloud.fastgpt.cn/api";
+
+        // DOM元素
+        const userQuestionInput = document.getElementById("user-question");
+        const sendButton = document.getElementById("send-button");
+        const chatDisplay = document.getElementById("chat-display");
+        const dateDisplay = document.getElementById("date-display");
+        const dailyHealthTip = document.getElementById("daily-health-tip");
+        const historyList = document.getElementById("history-list");
+        const fontToggleBtn = document.getElementById("fontToggleBtn"); // 大字版按钮
+
+        // 每日健康知识列表
+        const healthTipsList = [
+            "洗手是预防传染病最简单有效的方法，正确的七步洗手法：掌心对搓→手背对搓→指缝对搓→指背对搓→拇指旋转搓→指尖对搓→手腕搓，全程不少于20秒。",
+            "口罩应遮盖口鼻和下巴，鼻夹要压实，累计佩戴不超过8小时，潮湿或污染后应及时更换。",
+            "每天食盐摄入量应控制在5克以内（约1个啤酒瓶盖），高盐饮食会增加高血压、胃癌的发病风险。",
+            "成年人每天应保证7-8小时睡眠，熬夜会导致免疫力下降、血压升高，尽量做到晚上11点前入睡。",
+            "新鲜蔬菜和水果富含维生素和膳食纤维，建议每天吃够500克蔬菜、200-350克水果，深色蔬菜占一半以上。"
+        ];
+
+        // 历史记录和字体模式存储
+        const HISTORY_KEY = "health_chat_history";
+        const FONT_MODE_KEY = "largeFontMode";
+        let chatHistory = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+        let isLargeFont = JSON.parse(localStorage.getItem(FONT_MODE_KEY)) || false;
+
+        // 初始化大字版状态
+        function initFontMode() {
+            if (isLargeFont) {
+                document.body.classList.add("large-font");
+                fontToggleBtn.textContent = "切换普通版";
+            } else {
+                document.body.classList.remove("large-font");
+                fontToggleBtn.textContent = "切换大字版";
+            }
+        }
+
+        // 切换大字版/普通版
+        function toggleFontMode() {
+            isLargeFont = !isLargeFont;
+            localStorage.setItem(FONT_MODE_KEY, isLargeFont);
+            initFontMode();
+            chatDisplay.scrollTop = chatDisplay.scrollHeight;
+        }
+
+        // 初始化每日健康知识
+        function initDailyHealthTip() {
+            const today = new Date();
+            const formattedDate = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
+            dateDisplay.textContent = formattedDate;
+            const dailyIndex = Math.abs(today.getDate() % healthTipsList.length);
+            dailyHealthTip.textContent = healthTipsList[dailyIndex];
+        }
+
+        // 渲染历史记录
+        function renderHistory() {
+            if (chatHistory.length === 0) {
+                historyList.innerHTML = '<li class="empty">暂无历史记录</li>';
+                return;
+            }
+            const recentHistory = chatHistory.slice(-5).reverse();
+            historyList.innerHTML = recentHistory.map((item, idx) => `
+                <li data-index="${chatHistory.length - 1 - idx}">${item.question}</li>
+            `).join('');
+        }
+
+        // 加载历史对话
+        function loadHistoryConversation(index) {
+            const item = chatHistory[index];
+            chatDisplay.innerHTML = `
+                <p class="welcome-message">您好！我是疾控健康科普智能问答助手，专注为您解答健康科普相关问题，请问有什么可以帮助您的？</p>
+                <div class="message user-message">你：${item.question}</div>
+                <div class="message ai-message">AI助手：${item.answer}</div>
+            `;
+            chatDisplay.scrollTop = chatDisplay.scrollHeight;
+        }
+
+        // 保存聊天记录
+        function saveChatHistory(question, answer) {
+            chatHistory.push({ question, answer });
+            localStorage.setItem(HISTORY_KEY, JSON.stringify(chatHistory));
+            renderHistory();
+        }
+
+        // 生成聊天ID
+        function generateChatId() {
+            return Math.random().toString(36).substring(2, 15);
+        }
+        let chatId = localStorage.getItem('chatId') || generateChatId();
+        localStorage.setItem('chatId', chatId);
+
+        // 显示消息（增强：支持错误样式）
+        function displayMessage(content, sender, isError = false) {
+            const messageDiv = document.createElement("div");
+            messageDiv.classList.add("message", sender === "user" ? "user-message" : "ai-message");
+            if (isError) {
+                messageDiv.style.color = "#d9534f";
+                messageDiv.style.fontWeight = "bold";
+            }
+            messageDiv.innerHTML = sender === "user" ? `你：${content}` : `<strong>AI助手:</strong><br>${content}`;
+            chatDisplay.appendChild(messageDiv);
+            chatDisplay.scrollTop = chatDisplay.scrollHeight;
+        }
+
+        // 加载中提示
+        function displayLoadingIndicator() {
+            const loadingDiv = document.createElement("div");
+            loadingDiv.classList.add("message", "ai-message");
+            loadingDiv.textContent = "AI助手正在思考...";
+            chatDisplay.appendChild(loadingDiv);
+            chatDisplay.scrollTop = chatDisplay.scrollHeight;
+            return loadingDiv;
+        }
+
+        function removeLoadingIndicator(loadingDiv) {
+            if (loadingDiv && loadingDiv.parentNode) loadingDiv.parentNode.removeChild(loadingDiv);
+        }
+
+        // 发送消息（核心修改：增强错误提示+调试信息）
+        async function sendMessage() {
+            const userMessage = userQuestionInput.value.trim();
+            if (!userMessage) {
+                displayMessage("请输入您的问题后再发送！", "ai", true);
+                return;
+            }
+
+            // 显示用户消息
+            displayMessage(userMessage, "user");
+            userQuestionInput.value = "";
+
+            // 显示加载状态
+            const loadingDiv = displayLoadingIndicator();
+
+            try {
+                // 系统提示词
+                const systemPrompt = `你是面向普通大众及重点人群的健康科普问答助手，始终秉持亲切关怀的态度为用户提供权威、易懂的全领域健康科普解答，不涉及复杂健康管理、诊疗指导或个性化干预。
+回复必须严格遵循以下模板，缺一不可：
+1. 开头：添加亲切关心话语（如"您好呀，很乐意为您解答健康问题～"）；
+2. 正文后标注：「信息来源：中国疾病预防控制中心健康科普」；
+3. 结尾：先写「不替代专业诊疗与应急处置」，再补关怀提醒（如"希望这些信息能帮到您！"）。`;
+
+                const requestBody = {
+                    chatId: chatId,
+                    stream: true,
+                    detail: false,
+                    messages: [
+                        { role: "system", content: systemPrompt },
+                        { role: "user", content: userMessage }
+                    ]
+                };
+
+                console.log("🚀 发送请求参数：", JSON.stringify(requestBody, null, 2));
+                console.log("🚀 API Key（前10位）：", apiKey.substring(0, 10) + "****");
+
+                const response = await fetch(`${baseUrl}/v1/chat/completions`, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+
+                console.log("🚀 响应状态码：", response.status);
+                console.log("🚀 响应头：", Object.fromEntries(response.headers.entries()));
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`请求失败（状态码：${response.status}）：${errorText}`);
+                }
+
+                // 处理流式响应
+                removeLoadingIndicator(loadingDiv);
+                const aiMessageDiv = document.createElement("div");
+                aiMessageDiv.classList.add("message", "ai-message");
+                aiMessageDiv.innerHTML = `<strong>AI助手:</strong><br>`;
+                chatDisplay.appendChild(aiMessageDiv);
+                
+                let fullBotMessage = "";
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let partialData = "";
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    partialData += chunk;
+
+                    const lines = partialData.split('\n\n');
+                    partialData = lines.pop() || "";
+
+                    for (const line of lines) {
+                        if (line.startsWith("data: ")) {
+                            const jsonStr = line.substring(6).trim();
+                            if (jsonStr === "[DONE]") continue;
+                            
+                            try {
+                                const data = JSON.parse(jsonStr);
+                                const chunkText = data.choices[0]?.delta?.content || "";
+                                if (chunkText) {
+                                    fullBotMessage += chunkText;
+                                    aiMessageDiv.innerHTML = `<strong>AI助手:</strong><br>` + marked.parse(fullBotMessage);
+                                    chatDisplay.scrollTop = chatDisplay.scrollHeight;
+                                }
+                            } catch (e) {
+                                console.warn("⚠️ 解析流式数据出错：", e, "原始数据：", jsonStr);
+                            }
+                        }
+                    }
+                }
+
+                // 保存历史记录
+                saveChatHistory(userMessage, fullBotMessage);
+
+            } catch (error) {
+                removeLoadingIndicator(loadingDiv);
+                console.error("❌ 完整错误信息：", error);
+                let errorMsg = `AI助手暂时无法响应：${error.message}`;
+                if (error.message.includes("CORS") || error.message.includes("跨域")) {
+                    errorMsg += "<br><br>💡 可能原因：浏览器跨域限制，请使用后端代理或安装CORS插件（如Chrome的Allow CORS）";
+                } else if (error.message.includes("401") || error.message.includes("Unauthorized")) {
+                    errorMsg += "<br><br>💡 可能原因：API Key无效/过期，请检查并替换为有效的Key";
+                } else if (error.message.includes("403")) {
+                    errorMsg += "<br><br>💡 可能原因：API Key权限不足或账号无余额";
+                }
+                displayMessage(errorMsg, "ai", true);
+            }
+        }
+
+        // 事件监听
+        sendButton.addEventListener("click", sendMessage);
+        userQuestionInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        historyList.addEventListener("click", (e) => {
+            if (e.target.tagName === "LI" && !e.target.classList.contains("empty")) {
+                const index = e.target.dataset.index;
+                loadHistoryConversation(index);
+            }
+        });
+        fontToggleBtn.addEventListener("click", toggleFontMode);
+
+        // 初始化
+        window.onload = () => {
+            initFontMode();
+            initDailyHealthTip();
+            renderHistory();
+            console.log("✅ 页面初始化完成，如需排查问题，请发送消息后查看控制台日志！");
+        };
+    </script>
+</body>
+</html>
